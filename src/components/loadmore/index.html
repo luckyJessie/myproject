@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<style type="text/css">
+  .loadmore {
+    width:800px;
+    height:200px;
+    position:fixed;
+    right:50px;
+    bottom:50px;
+    background:red;
+    overflow-y:scroll;
+  }
+  .mainDiv {
+    width: 800px;
+    border: solid 1px #f00;
+  }
+
+  .item {
+    width: 600px;
+    height: 50px;
+    border: solid 1px #00ff90;
+    font-size: 12px;
+    margin: 10px;
+  }
+
+  .title {
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .content {
+    line-height: 14px;
+  }
+  .alink
+  {
+    display:none;
+  }
+  .loaddiv
+  {
+    display:none;
+  }
+</style>
+<body>
+<h1>滚动测试</h1>
+<div class="loadmore">
+  <div class="mainDiv">
+    <!--<div class="item">
+        <div class="title">title</div>
+        <div class="content">content content content content content content content</div>
+    </div>
+    -->
+  </div>
+</div>
+<div class="loaddiv">
+  <img src="images/loading.gif" />
+</div>
+<div>
+  <a href="javascript:void(0);" id="btn_Page" class="alink">查看更多>>></a>
+</div>
+<script>
+//  var reg = new RegExp('([\\u1100-\\u11ff\\uac00-\\ud7af\\u3130–\\u318F\\u3200–\\u32FF\\uA960–\\uA97F\\uD7B0–\\uD7FF\\uFF00–\\uFFEF\\s]+)')
+//  console.log(reg.test('네이버 중국어사전'))
+//  var reg2 = new RegExp('[\u0800-\u4e00]+')
+//  console.log(reg2.test('おはよ'))
+//  var reg3 = new RegExp('[\u3040-\u309F\u30A0-\u30FF]+')
+//  console.log(reg3.test('おはよ'))
+//  let ftitleReg6 = new RegExp('[\u3040-\u309F\u30A0-\u30FF]+')
+//  console.log(ftitleReg6.test('😈解决'))
+  let reg5 = new RegExp('((http|ftp|https)://)(([a-zA-Z0-9\._-]+\.[a-zA-Z]{2,6})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))(:[0-9]{1,4})*(/[a-zA-Z0-9\&%_\./-~-]*)')
+  console.log(reg5.test('https://www.zhihu.com/question/21996606'))
+</script>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script src="endlesspage.js"></script>
+</body>
+</html>

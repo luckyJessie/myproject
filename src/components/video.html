@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>IconFont</title>
+<body>
+  <video id="thevideo" autoplay width="300" height="200" poster="../img/nature4.jpg">
+    <source src="http://gz.chimelong.com/happy/images/banner/happy08.mp4" type="video/mp4" >
+    <!-- IE低版本 -->
+    <object>
+      <embed src="http://gz.chimelong.com/happy/images/banner/happy08.mp4" type= "application/x-shockwave-flash" allowfullscreen="false" allowscriptaccess="always" width="300" height="200"/>
+    </object>
+  </video>
+  <div id="wrap">
+    <button id="play" title="play">play</button>
+    <button id="restart" title="restart">replay</button>
+    <button id="rew" title="rew">rew</button>
+    <button id="forward" title="forward">forward</button>
+    <button id="slower" title="slower">slower</button>
+    <button id="mormal" title="mormal">mormal</button>
+    <button id="faster" title="faster">faster</button>
+    <button id="volumeUp" title="volumeUp">volumeUp+</button>
+    <button id="volumeDown" title="volumeDown">volumeDown-</button>
+    <button id="mute" title="mute">mute</button>
+    <div id="vLength"></div>
+    <div id="curTime"></div>
+    <div id="vRemaining"></div>
+    <div id="mutetext"></div>
+    <div id="errorMsg"></div>
+    <!-- <img src="/images/3.png" id="rotateVideo" alt=""> -->
+  </div>
+  <div title="Event status area" >
+    <label>oncanplaythrough: </label><span class="stats" id="cpt"></span><br />
+    <label>onloadstart: </label><span class="stats"  id="ls"></span><br />
+    <label>onprogress: </label><span class="stats"  id="pg"></span><br />
+    <label>onloadeddata: </label><span class="stats" id="ld"></span><br />
+    <label>onended: </label><span class="stats" id="ndd"></span><br />
+    <label>onemptied: </label><span class="stats" id="mt"></span><br />
+    <label>onstalled: </label><span class="stats" id="stall"></span><br />
+    <label>onwaiting: </label><span class="stats" id="waiting"></span><br />
+    <label>ondurationchange: </label><span class="stats" id="dc"></span><br />
+  </div>
+  <script>
+  (function(){
+    var video = document.getElementById("thevideo");
+    var vLength;
+    var pgFlag = "";        //used for progress tracking
+
+    if(video.canPlayType){  //tests that we have HTML5 video support
+      //video button helper functions;
+      //play video
+      function vidplay(evt){
+        if(video.paused){
+          video.play();
+          document.getElementById("play").innerHTML = "暂停";
+        }else{
+          video.pause();
+          document.getElementById("play").innerHTML = "播放"
+        }
+      }
+      video.addEventListener("canplay",function(){
+        document.getElementById("wrap").style.display = "block";
+        video.controls = true;
+      },false)
+
+      //button helper functions
+      //skip,forward,backwrap,or restart
+      function  setTime(tValue){
+        //if no video is loaded,this throws an exception
+        try{
+          if(tValue == 0){
+            video.currentTime = tValue;
+            video.play();   //如果是暂停后再按重放键会重置到开始是暂停状态,所以要开启
+          }else{
+            video.currentTime += tValue;
+          }
+        }catch(err){
+          errMessage("Video content might not be loaded");
+        }
+      }
+
+      //change volume based on incoming value
+      function setVol(value){
+        var vol = video.volume;
+        vol = (vol + value).toFixed(1);
+        //test for range 0 - 1 to avoid exceptions
+        if(vol >= 0 && vol <= 1){
+          video.volume = vol;
+        }else{
+          video.volume = (vol < 0) ? 0 : 1;
+        }
+      }
+
+      //点击视频内容播放暂停
+      var borwser = (function(){
+        var s = navigator.userAgent.toLowerCase();
+        var match = /(webkit)[ \/]([\w.]+)/.exec(s)||/(opera)(?:.*version)?[ \/]([\w.]+)/.exec(s)||(!!window.ActiveXObject || "ActiveXObject" in window) && /(msie\s|rv:)([\w.]+)/.exec(s)||!/compatible/.test(s) && /(mozilla)(?:.*? rv:([\w.]+))?/.exec(s) ||[];
+        return {name : match[1] || "",version : match[2] || "0"};
+      })();
+      if(borwser.name !== "mozilla"){
+        video.addEventListener("click",vidplay,false);
+        console.log("非火狐浏览器")
+      }else{
+        console.log("火狐浏览器")
+      }
+
+      //chrome和opera双击全屏
+      if(borwser.name === "webkit"){
+        //chrome的双击视频画面全屏
+        var count = 0;
+        video.addEventListener("dblclick",function(){
+          if(count % 2 == 0){
+            video.webkitRequestFullScreen();
+          }else{
+            // video.exitFullscreen();
+            document.webkitCancelFullScreen();
+            console.log("退出全屏")
+          }
+          count++;
+        },false);
+      }
+
+      //play
+      document.getElementById("play").addEventListener("click",vidplay,false);
+
+      //restart
+      document.getElementById("restart").addEventListener("click",function(){
+        setTime(0);
+      },false);
+
+      //Skip backwrad 10 seconds
+      document.getElementById("rew").addEventListener("click",function(){
+        setTime(-10);
+      },false);
+
+      //Skip forward 10 seconds
+      document.getElementById("forward").addEventListener("click",function(){
+        setTime(10);
+      },false);
+
+      //volume buttons
+      document.getElementById("volumeDown").addEventListener("click",function(){
+        setVol(-.1);        //down by 10%;
+      },false);
+      document.getElementById("volumeUp").addEventListener("click",function(){
+        setVol(.1);        //up by 10%;
+      },false);
+
+      //playback speed buttons
+      document.getElementById("slower").addEventListener("click",function(){
+        video.playbackRate -= .25;
+      },false);
+
+      document.getElementById("faster").addEventListener("click",function(){
+        video.playbackRate += .25;
+      },false);
+
+      document.getElementById("mormal").addEventListener("click",function(){
+        video.playbackRate = 1;
+      },false);
+
+      //mute
+      document.getElementById("mute").addEventListener("click",function(){
+        if(video.muted){
+          video.muted = false;
+        }else{
+          video.muted = true;
+        }
+      },false);
+
+      //paused and playing events to control buttons
+      video.addEventListener("pause",function(){
+        document.getElementById("play").innerHTML = "播放";
+      },false);
+
+      video.addEventListener("playing",function(){
+        document.getElementById("play").innerHTML = "暂停";
+      },false);
+
+      //display video duration when availbale
+      video.addEventListener("loadedmetadata",function(){
+        vLength = video.duration.toFixed(1);
+        document.getElementById("vLength").innerHTML = "视频时间长度:" + vLength + "秒";
+      },false)
+
+      //display the current and remaining times
+      video.addEventListener("timeupdate",function(){
+        var vTime = video.currentTime;
+        document.getElementById("curTime").innerHTML = "当前播放时间:" + vTime.toFixed(1) + "秒";
+        document.getElementById("vRemaining").innerHTML = "当前播放时间:" + (vLength - vTime).toFixed(1) + "秒";
+      },false);
+
+      //onvolumechange controls mute
+      video.addEventListener("volumechange",function(){
+        if(video.muted){
+          document.getElementById("mutetext").innerHTML = "声音:静音";
+        }else{
+          document.getElementById("mutetext").innerHTML = "音量:" + video.volume;
+        }
+      },false);
+
+      //any video error will fail with message
+      video.addEventListener("error",function(err){
+        errMessage(err);
+      },false);
+
+      //Download and playback status events
+      //页面加载时出现
+      video.addEventListener("loadstart",function(){
+        document.getElementById("ls").innerHTML = "Stared";
+      },false);
+
+      //视频加载完后才出现
+      video.addEventListener("loadeddata",function(){
+        document.getElementById("ld").innerHTML = "Data was loaded";
+      },false);
+
+      //视频播放结束后触发
+      video.addEventListener("ended",function(){
+        document.getElementById("ndd").innerHTML = "Playback ended;";
+      },false);
+
+      //重置为初始状态下触发
+      video.addEventListener("emptied",function(){
+        document.getElementById("mt").innerHTML = "Video reset";
+      },false);
+
+      //在下载被中断三秒以上时引发.网络差时触发
+      video.addEventListener("stalled",function(){
+        document.getElementById("stall").innerHTML = "Download was stalled";
+      },false);
+
+      //播放下一帧不可用时触发(断网或者缓冲情况下)
+      video.addEventListener("waiting",function(){
+        document.getElementById("waiting").innerHTML = "Player waited for content";
+      },false);
+
+      //指示正在下载媒体内容,下载完后停止
+      video.addEventListener("progress",function(){
+        pgFlag += ".";
+        if(pgFlag.length > 10){
+          pgFlag = ".";
+        }
+        document.getElementById("pg").innerHTML = pgFlag;
+      },false);
+
+      //在onloadstart之后和onloadedmetadata(确定时间)之前主立即引发
+      video.addEventListener("durationchange", function () {
+        document.getElementById("dc").textContent = "Duration has changed";
+      }, false);
+
+      //在不需要进一步缓冲就可以播放直至文件结束时引发
+      video.addEventListener("canplaythrough", function () {
+        document.getElementById("cpt").textContent = "Ready to play whole video";
+      }, false);
+
+
+
+      function errMessage(msg){
+        //display an error message for 5 seconds then clears it;
+        document.getElementById("errorMsg").innerHTML = msg;
+        setTimeout(function(){
+          document.getElementById("errorMsg").innerHTML = "";
+        },5000);
+      }
+    }else{
+      errMessage("HTML5 Video is required for this example");
+    }
+  }())
+</script>
+</body>
+</html>

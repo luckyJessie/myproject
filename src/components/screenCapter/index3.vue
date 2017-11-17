@@ -1,0 +1,379 @@
+
+<template>
+  <div class="screenshot">
+    <h1>截图</h1>
+    <div class="canvas-block" :style="{height: canvas.height + 10 + 'px'}">
+      <canvas class="canvas-cut"
+              v-show="status !== 'completed'"
+              :style="{cursor: cursor}"
+              @mousedown="mousedownBundle"
+              @touchmove="touchmoveBundle"
+              @mouseup="mouseupBundle"
+              @mousemove="mousemoveBundle">
+        你的浏览器不支持canvas,请升级你的浏览器
+      </canvas>
+      <canvas class="result" id="myCanvas" v-show="status === 'completed'"></canvas>
+    </div>
+  </div>
+</template>
+
+<script>
+  export default {
+    name: 'screenshot',
+    props: {
+      cutType: {
+        type: Object,
+        default () {
+          return {
+            type: 'free',
+            width: -1,
+            height: -1
+          }
+        }
+      },
+      imgFile: {
+        validator (value) {
+          return value === '' || value instanceof File
+        }
+      },
+      imgUrl: {
+        type: String
+      },
+      img: {
+        type: Image
+      },
+      typeCanChange: {
+        type: Boolean,
+        default: true
+      }
+    },
+    data () {
+      return {
+        canvas: '',
+        type: this.cutType.type,
+        typeChange: this.typeCanChange,
+        cutPre: {
+          width: this.cutType.width,
+          height: this.cutType.height
+        },
+        imgsrc: {
+          url: null,
+          img: null,
+          file: null,
+          pos: {x: -1, y: -1},
+          size: {width: 0, height: 0}
+        },
+        status: 'cut',
+        imgdest: null,
+        cursor: 'auto',
+        area: {
+          start: {x: -1, y: -1},
+          end: {x: -1, y: -1}
+        },
+        moveStart: {
+          x: -1,
+          y: -1
+        }
+      }
+    },
+    watch: {
+      status (to, from) {
+        if (to === 'completed') {
+          this.drawDest()
+        }
+      },
+      'imgsrc.file' (to, from) {
+        this.initImgsrc(to)
+      },
+      'imgFile' (file) {
+        this.imgsrc.file = file
+      },
+      'imgUrl' (url) {
+        this.initImgsrc(url)
+      },
+      'img' (img) {
+        this.initImgsrc(img)
+      }
+    },
+    mounted () {
+      this.canvas = document.getElementsByClassName('canvas-cut')[0]
+      this.canvas.width = 0.9 * window.innerWidth
+      this.canvas.height = 0.8 * window.innerHeight
+      var url = require('../../assets/logo.png')
+      this.initImgsrc(url)
+    },
+    methods: {
+      initImgsrc (img) {
+        var drawImage = this.drawImage
+        console.log(img instanceof String)
+        if (img instanceof File) {
+          this.imgsrc.url = window.URL.createObjectURL(img)
+        } else if (img instanceof Image) {
+          this.imgsrc.img = img
+          drawImage(img)
+        } else {
+          this.imgsrc.url = img
+        }
+        var image = new Image()
+        image.src = this.imgsrc.url
+        this.imgsrc.img = image
+        image.onload = function () {
+          drawImage(this)
+        }
+      },
+      drawImage (image) {
+        var canvasWH = this.canvas.width / this.canvas.height
+        var imgWH = image.width / image.height
+        var srcX = 0
+        var srcY = 0
+        var sw = 0
+        var sh = 0
+        if (canvasWH > imgWH) {
+          sh = this.canvas.height
+          sw = sh * imgWH
+          srcX = this.canvas.width * 0.5 - sw * 0.5
+        } else {
+          sw = this.canvas.width
+          sh = sw / imgWH
+          srcY = this.canvas.height * 0.5 - sh * 0.5
+        }
+        this.imgsrc.pos.x = srcX
+        this.imgsrc.pos.y = srcY
+        this.imgsrc.size.width = sw
+        this.imgsrc.size.height = sh
+        this.updateArea(this)
+      },
+      imgChange () {
+        this.status = 'selected'
+        this.area.start.x = this.area.end.x = this.area.start.y = this.area.end.y = -1
+        this.imgsrc.file = event.target.files[0]
+      },
+      recut () {
+        this.imgdest = ''
+        this.status = null
+        this.area.start.x = this.area.end.x = this.area.start.y = this.area.end.y = -1
+        this.updateArea()
+      },
+      updateArea () {
+        var ctx = this.canvas.getContext('2d')
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        ctx.drawImage(this.imgsrc.img,
+          this.imgsrc.pos.x,
+          this.imgsrc.pos.y,
+          this.imgsrc.size.width,
+          this.imgsrc.size.height)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+        ctx.fillRect(this.area.start.x,
+          this.area.start.y,
+          this.area.end.x - this.area.start.x,
+          this.area.end.y - this.area.start.y)
+      },
+      drawDest () {
+        var ctx = this.canvas.getContext('2d')
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        ctx.drawImage(this.imgsrc.img,
+          this.imgsrc.pos.x,
+          this.imgsrc.pos.y,
+          this.imgsrc.size.width,
+          this.imgsrc.size.height)
+        var imgdest = ctx.getImageData(
+          this.area.start.x,
+          this.area.start.y,
+          this.area.end.x - this.area.start.x,
+          this.area.end.y - this.area.start.y)
+        this.imgdest = imgdest
+        var result = document.getElementsByTagName('canvas')[1]
+        result.width = imgdest.width
+        result.height = imgdest.height
+        result.style.top = (this.canvas.height - imgdest.height) * 0.5 + 'px'
+        result.style.left = (this.canvas.width - imgdest.width) * 0.5 + 'px'
+        ctx = result.getContext('2d')
+        ctx.clearRect(0, 0, result.width, result.height)
+        ctx.putImageData(imgdest, 0, 0)
+        this.imgdest.url = result.toDataURL()
+      },
+      inRange (x, y) {
+        return x >= this.imgsrc.pos.x &&
+          y >= this.imgsrc.pos.y &&
+          x <= this.imgsrc.pos.x + this.imgsrc.size.width &&
+          y <= this.imgsrc.pos.y + this.imgsrc.size.height
+      },
+      startCut (event) {
+        var x = event.offsetX
+        var y = event.offsetY
+        if (this.imgsrc.img &&
+          this.status === 'cut' &&
+          this.inRange(x, y)) {
+          this.area.start.x = x
+          this.area.start.y = y
+          this.status = 'cutting'
+          if (this.type === 'fixedSize') {
+            this.area.end.x += (this.cutPre.width + this.area.start.x)
+            this.area.end.y += (this.cutPre.height + this.area.start.y)
+            this.stopCut()
+          }
+        }
+      },
+      moveArea (event) {
+        if (this.status === 'moving') {
+          var area = this.area
+          var imgsrc = this.imgsrc
+          var x = event.offsetX
+          var y = event.offsetY
+          var lx = x - this.moveStart.x
+          var ly = y - this.moveStart.y
+          lx = area.start.x + lx < imgsrc.pos.x ? area.start.x - imgsrc.pos.x : lx
+          ly = area.start.y + ly < imgsrc.pos.y ? area.start.y - imgsrc.pos.y : ly
+          lx = area.end.x + lx > imgsrc.pos.x + imgsrc.size.width
+            ? imgsrc.pos.x + imgsrc.size.width - area.end.x : lx
+          ly = area.end.y + ly > imgsrc.pos.y + imgsrc.size.height
+            ? imgsrc.pos.y + imgsrc.size.height - area.end.y : ly
+          area.start.x += lx
+          area.start.y += ly
+          area.end.x += lx
+          area.end.y += ly
+          this.moveStart.x = x
+          this.moveStart.y = y
+          this.updateArea()
+        }
+      },
+      stopCut () {
+        if (this.status !== 'cutting') {
+          return
+        }
+        this.status = 'move'
+        var sw = this.area.end.x - this.area.start.x
+        var sh = this.area.end.y - this.area.start.y
+        var temp = 0
+        if (sw < 0) {
+          temp = this.area.end.x
+          this.area.end.x = this.area.start.x
+          this.area.start.x = temp
+        }
+        if (sh < 0) {
+          temp = this.area.end.y
+          this.area.end.y = this.area.start.y
+          this.area.start.y = temp
+        }
+        this.updateArea()
+        if (sw === 0 || sh === 0) {
+          return
+        }
+      },
+      cutting (event) {
+        if (this.status === 'cutting') {
+          this.area.end.x = event.offsetX
+          this.updateArea()
+        }
+      },
+      mousedownBundle (event) {
+        var x = event.offsetX
+        var y = event.offsetY
+        if (this.status === 'move') {
+          this.moveStart.x = x
+          this.moveStart.y = y
+          this.status = 'moving'
+        } else {
+          this.startCut(event)
+        }
+      },
+      mousemoveBundle (event) {
+        if (this.status !== 'moving' && this.status !== 'cutting') {
+          if (this.inArea(event.offsetX, event.offsetY)) {
+            this.cursor = 'move'
+            this.status = 'move'
+          } else if (this.inRange(event.offsetX, event.offsetY)) {
+            this.cursor = 'crosshair'
+            this.status = 'cut'
+          } else {
+            this.cursor = 'auto'
+            this.status = null
+          }
+        }
+        if (this.status === 'moving') {
+          this.moveArea(event)
+        } else {
+          this.cutting(event)
+        }
+      },
+      mouseupBundle (event) {
+        if (this.status === 'moving') {
+          this.status = 'completed'
+//          var canvasTools = new CanvasTools(document.getElementById('myCanvas'), {
+//            container : document.getElementById('myCanvasTools')
+//          })
+        } else {
+          this.stopCut()
+        }
+      },
+      mousemoveBundle (event) {
+        if (this.status !== 'moving' && this.status !== 'cutting') {
+          if (this.inArea(event.offsetX, event.offsetY)) {
+            this.cursor = 'move'
+            this.status = 'move'
+          } else if (this.inRange(event.offsetX, event.offsetY)) {
+            this.cursor = 'crosshair'
+            this.status = 'cut'
+          } else {
+            this.cursor = 'auto'
+            this.status = null
+          }
+        }
+        if (this.status === 'moving') {
+          this.moveArea(event)
+        } else {
+          this.cutting(event)
+        }
+      },
+      inArea (x, y) {
+        return (x >= this.area.start.x &&
+        x <= this.area.end.x &&
+        y >= this.area.start.y &&
+        y <= this.area.end.y)
+      },
+      areaInRange () {
+        var area = this.area
+        var imgsrc = this.imgsrc
+        return area.start.x > imgsrc.pos.x &&
+          area.start.y > imgsrc.pos.y &&
+          area.end.x <= imgsrc.pos.x + imgsrc.size.width &&
+          area.end.y <= imgsrc.pos.y + imgsrc.size.height
+      }
+    }
+  }
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+  .screenshot {
+    width: 90%;
+    margin: 0 auto;
+  }
+  .canvas-block {
+    position: relative;
+    width: 100%;
+  }
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0 10px 1px #C9C9C9;
+  }
+  .cutting {
+    cursor: crosshair;
+  }
+  .move {
+    cursor: move;
+  }
+  .cutPre-block input {
+    max-width: 40px;
+    text-align: center;
+  }
+  .controls {
+    margin-top: 10px;
+    padding: 10px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 0 10px 2px #c9c9c9;
+  }
+</style>

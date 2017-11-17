@@ -1,0 +1,150 @@
+<link rel="stylesheet" href="/static/css/video_list.css">
+<div class="clearfix">
+  <div class="upload_main clearfix">
+    <div class="menu clearfix">
+      <input type="hidden" name="_auth_token" value="<?=$_auth_token?>" class="auth_token">
+      <div class='p_total'>2016-10-18至2016-11-17共发布 <span id="total"></span>个视频</div>
+      <form action='/video' method='GET' id='form1'>
+        <div class="M_main_top clearfix">
+          <input style=" float:left" name='sTime' id="d_d1" class="Wdate" type="text"
+                 onfocus="var d_d2=$dp.$('d_d2');WdatePicker({onpicked:function(){d_d2.focus()},maxDate:'#F{$dp.$D(\'d_d2\')}',skin:'twoer'})"
+                 value=''>
+          <div class='font-size-14' style="float:left; line-height:16px; width:40px; text-align:center">至
+          </div>
+          <input id="d_d2" class="Wdate" name='eTime' style="float:left" type="text"
+                 onfocus="WdatePicker({onpicked:function(){ $('#form1').submit();},minDate:'#F{$dp.$D(\'d_d1\')}',skin:'twoer'});"
+                 value=''>
+          <!--a href="" style="float:left; margin-left:4px; margin-top:1px;color:#fff;" class="M_choose">筛选</a-->
+        </div>
+      </form>
+    </div>
+    <ul class="video_list">
+
+    </ul>
+    <!--分页-->
+    <div class="pagess clearfix"></div>
+
+    <!--删除视频-->
+    <div class="upload_dialog delate_upload none">
+      <div class="confirm">
+                <span class="exit"><img src="http://wsacdn1.miaopai.com/static20131031/creator/img/exit.gif"
+                                        alt=""></span>
+        <h2>确定删除该视频？</h2>
+        <div class="sure">确定</div>
+        <div class="cancel">取消</div>
+      </div>
+    </div>
+    <!--查看视频-->
+    <div class="jcrop_dialog video_dialog" style="display: none;">
+      <div class="clipping_img">
+        <h1>查看视频 <img src="http://wsacdn1.miaopai.com/static20131031/creator/img/images/exit.gif" alt=""
+                      class="exit"></h1>
+        <div class="mask_wrap">
+          <video id="video"
+                 src=""
+                 data-index="0" controls="" autoplay="">仅支持Firefox、Chrome、IE9以上浏览器
+          </video>
+        </div>
+        <div class="jcrop_confirm clearfix">
+          <!-- <div id='capture' class="set">设置当前画面为封面</div> -->
+        </div>
+        <!-- <p>仅支持Firefox、Chrome、IE9以上浏览器</p> -->
+      </div>
+    </div>
+  </div>
+</div>
+<div class="tips">
+  <div class="tips_con">
+    <span class="exit"><img src="/static/img/exit.gif" alt=""></span>
+    <p>视频时长超过15分钟，请裁剪后上传。</p>
+    <button>确定</button>
+  </div>
+</div>
+
+<script>
+  $(function () {
+
+    function viewTips(msg) {
+      var obj = $('.tips');
+      obj.find('p').text(msg);
+      obj.show();
+    }
+
+    $(".tips button,.tips .exit").click(function () {
+      var obj = $('.tips');
+      obj.hide();
+    })
+
+    $(".video_list").on("click", ".set_image,.play", function () {
+
+      var video_index = $(this).closest(".upload_box").index();
+      var tmp_video = $(this).attr("data-video");
+      if (tmp_video == '' || typeof tmp_video == 'undefined') {
+        return;
+      }
+      $(".video_dialog").show();
+      $(".video_dialog .mask_wrap").html("<video id='video' src='" + tmp_video + "' data-index='" + video_index + "' controls autoplay>仅支持Firefox、Chrome、IE9以上浏览器</video>");
+
+    });
+
+    $(".video_dialog .exit").on("click", function () {
+      video.pause();
+      $(".video_dialog").hide();
+    });
+
+    showVideoList();
+    function showVideoList() {
+      /*初始化时间*/
+      var sTime = getUrlParam('sTime') || getBeforeDate(30);
+      $('#form1').find("input[name='sTime']").val(sTime);
+      var eTime = getUrlParam('eTime') || getBeforeDate(0);
+      $('#form1').find("input[name='eTime']").val(eTime);
+      var page = getUrlParam("page") || 1;
+
+      var transCodeScid = [];
+      $.ajax({
+        url: '/video/getList',
+        type: 'POST',
+        data: {
+          type: 2,
+          sTime: $('#form1').find("input[name='sTime']").val(),
+          eTime: $('#form1').find("input[name='eTime']").val(),
+          page: page
+        },
+        dataType: 'json',
+        success: function (data) {
+          $(".pagess").html(getPageHtml({
+            pageNum: getUrlParam("page"),
+            pageSize: items.count,
+            totalNum: items.total,
+            showNum: 8,
+            currClass: 'current',
+            showTotal: false,
+            showFirstLast: true
+          }));
+
+
+          /*复制链接功能*/
+          var clipboard = new Clipboard('#copy_site');
+          clipboard.on('success', function (e) {
+            viewTips("复制成功！");
+            return false;
+          });
+          clipboard.on('error', function (e) {
+            viewTips("复制失败！您的浏览器不支持自动复制！请手动复制如下链接：\n" + e.text);
+            return false;
+          });
+          var clipboard_iframe = new Clipboard('#copy_iframe');
+          clipboard_iframe.on('success', function (e) {
+            viewTips("复制成功！");
+            return false;
+          });
+          clipboard_iframe.on('error', function (e) {
+            viewTips("复制失败！您的浏览器不支持自动复制！请手动复制如下链接：\n" + e.text);
+            return false;
+          });
+      });
+    }
+  })
+</script>
+<script src="/static/js/common/page_util.js"></script>
